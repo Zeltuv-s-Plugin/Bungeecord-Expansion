@@ -1,5 +1,6 @@
 package com.extendedclip.papi.bungeeexpansion;
 
+import com.extendedclip.papi.bungeeexpansion.hook.UltraSpoofHook;
 import com.google.common.base.Splitter;
 import com.google.common.collect.Iterables;
 import com.google.common.io.ByteArrayDataInput;
@@ -14,7 +15,6 @@ import org.bukkit.entity.Player;
 import org.bukkit.plugin.messaging.PluginMessageListener;
 import org.bukkit.scheduler.BukkitTask;
 
-import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.lang.reflect.Field;
 import java.util.Collections;
@@ -36,6 +36,8 @@ public final class BungeeExpansion extends PlaceholderExpansion implements Plugi
 
     private final Map<String, Integer>        counts = new HashMap<>();
     private final AtomicReference<BukkitTask> cached = new AtomicReference<>();
+
+    private UltraSpoofHook ultraSpoofHook;
 
     private static Field inputField;
 
@@ -88,6 +90,9 @@ public final class BungeeExpansion extends PlaceholderExpansion implements Plugi
 
     @Override
     public void start() {
+
+        ultraSpoofHook = new UltraSpoofHook();
+
         final BukkitTask task = Bukkit.getScheduler().runTaskTimer(getPlaceholderAPI(), () -> {
 
             if (counts.isEmpty()) {
@@ -162,7 +167,7 @@ public final class BungeeExpansion extends PlaceholderExpansion implements Plugi
     }
 
     private void sendMessage(final String channel, final Consumer<ByteArrayDataOutput> consumer) {
-        final Player player = Iterables.getFirst(Bukkit.getOnlinePlayers(), null);
+        final Player player = getAnyPlayer();
         if (player == null) {
             return;
         }
@@ -174,6 +179,10 @@ public final class BungeeExpansion extends PlaceholderExpansion implements Plugi
         consumer.accept(out);
 
         player.sendPluginMessage(getPlaceholderAPI(), MESSAGE_CHANNEL, out.toByteArray());
+    }
+
+    public Player getAnyPlayer() {
+        return Bukkit.getOnlinePlayers().stream().filter(p -> !ultraSpoofHook.isSpoofed(p)).findFirst().orElse(null);
     }
 
 }
